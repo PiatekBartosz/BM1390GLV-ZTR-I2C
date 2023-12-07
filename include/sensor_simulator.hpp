@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <stdint.h>
+#include <vector>
 
 #define MANUFACTURER_ID_ADDR 0x0F
 #define PART_ID_ADDR 0x10
@@ -78,4 +79,4 @@ typedef struct {
 
 } SensorRegisters;
 
-int parse_line(char *line, Register *reg);
+int parse_line(char *line, SensorRegisters *sensorRegisters);
