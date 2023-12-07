@@ -14,7 +14,7 @@ int main(void) {
 
     while (std::getline(iFile, line)) {
         std::cout << "Read data from file: "<< line << std::endl;
-        parse_line(line, &sensorRegisters);
+        // parse_line(line, &sensorRegisters);
 
 
     }
