@@ -5,6 +5,11 @@
 #include <vector>
 #include <sstream>
 
+// includes for socket programming
+#include <sys/socket.h>
+#include <cstring>
+#include <unistd.h>
+
 #define MANUFACTURER_ID_ADDR 0x0F
 #define PART_ID_ADDR 0x10
 #define POWER_DOWN_ADDR 0x12
