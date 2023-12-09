@@ -1,0 +1,31 @@
+sensor i2c slave address: 1011101
+MANUFACTURER ID: 0xE0 
+Part ID: 0x34
+
+SRC:   218 2021-10-17 11:58:06.665 UWB -> 
+
+CNT:  8, -> frame count 
+
+DSTR: false, 
+
+MODE: MOV, 
+
+EXC: 0 
+
+WID:   222 
+
+GID:   228 
+
+BAT:  90 
+
+PRS: 101421 
+
+TMP: 17.1 
+
+TS: 444378182702 
+
+RSSI: -93 
+
+FPPL: -97 
+
+CSQ: 0

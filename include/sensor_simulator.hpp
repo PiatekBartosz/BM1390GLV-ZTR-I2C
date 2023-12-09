@@ -3,6 +3,7 @@
 #include <string>
 #include <stdint.h>
 #include <vector>
+#include <sstream>
 
 #define MANUFACTURER_ID_ADDR 0x0F
 #define PART_ID_ADDR 0x10
@@ -17,6 +18,9 @@
 #define PRESSURE_OUT_XL_ADDR 0x1C
 #define TEMPERATURE_OUT_HIGH_ADDR 0x1D
 #define TEMPERATURE_OUT_LOW_ADDR 0x1E
+
+#define MANUFACTURER_ID 0xE0;
+#define PART_ID 0x34;
 
 typedef uint8_t RegisterAddress;
 
@@ -79,4 +83,5 @@ typedef struct {
 
 } SensorRegisters;
 
-int parse_line(char *line, SensorRegisters *sensorRegisters);
+int parseLine(std::string line, volatile SensorRegisters *sensorRegisters); 
+int initSensorRegisters(volatile SensorRegisters *sensorRegisters);
