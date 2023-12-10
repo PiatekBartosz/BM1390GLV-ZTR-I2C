@@ -16,10 +16,16 @@
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
-void init_i2c(void);
+// I2C interface
+int i2c_init(void);
+bool i2c_start(void);
+bool i2c_stop(void);
+bool i2c_address(uint8_t addr);
+bool i2c_write(uint8_t *data, size_t size);
+bool i2c_read(uint8_t register_address, uint8_t *data, size_t size);
 
-bool i2c_write(int connfd, uint8_t addr, uint8_t *data, uint8_t len);
-
-bool i2c_read(int connfd, uint8_t addr, uint8_t *data, uint8_t len);
+// functions to simulate I2C using sockets
+bool socket_write(char *buff, size_t size);
+bool socket_read(char *buff);
 
 #endif // I2C_H
