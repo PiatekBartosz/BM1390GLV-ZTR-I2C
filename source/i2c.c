@@ -8,11 +8,7 @@ bool i2c_write(int connfd, uint8_t addr, uint8_t *data, uint8_t len) {
   int n;
 
   bzero(buff, sizeof(buff));
-  n = 0;
-
-  while ((buff[n++] = getchar()) != '\n')
-    ;
-
+  strcpy(buff, "Hello from client");
   ssize_t ret = write(connfd, buff, sizeof(buff));
 
   if (ret < 0) {
@@ -32,7 +28,8 @@ bool i2c_read(int connfd, uint8_t addr, uint8_t *data, uint8_t len) {
 
   read(connfd, buff, sizeof(buff));
 
-  // TODO change return value
+  printf("From Server in CLient: %s\n", buff);
 
+  // TODO change return value
   return true;
 }

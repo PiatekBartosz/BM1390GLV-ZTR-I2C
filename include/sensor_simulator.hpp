@@ -17,6 +17,9 @@
 #include <sys/socket.h>
 #include <unistd.h> // read(), write(), close()
 
+#define PORT 8080
+#define BUFFER_SIZE 1024
+
 #define MANUFACTURER_ID_ADDR 0x0F
 #define PART_ID_ADDR 0x10
 #define POWER_DOWN_ADDR 0x12
@@ -97,3 +100,4 @@ typedef struct {
 
 int parseLine(std::string line, volatile SensorRegisters *sensorRegisters); 
 int initSensorRegisters(volatile SensorRegisters *sensorRegisters);
+void handleclient(int connfd, volatile SensorRegisters *sensorRegisters);
