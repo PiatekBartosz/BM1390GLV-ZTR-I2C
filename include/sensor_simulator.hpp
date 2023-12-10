@@ -6,9 +6,16 @@
 #include <sstream>
 
 // includes for socket programming
+
+#include <arpa/inet.h> // inet_addr()
+#include <netdb.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h> // bzero()
 #include <sys/socket.h>
-#include <cstring>
-#include <unistd.h>
+#include <unistd.h> // read(), write(), close()
 
 #define MANUFACTURER_ID_ADDR 0x0F
 #define PART_ID_ADDR 0x10
