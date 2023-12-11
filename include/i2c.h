@@ -21,11 +21,11 @@ int i2c_init(void);
 bool i2c_start(void);
 bool i2c_stop(void);
 bool i2c_address(uint8_t addr);
-bool i2c_write(uint8_t *data, size_t size);
+bool i2c_write(uint8_t register_address, uint8_t *data);
 bool i2c_read(uint8_t register_address, uint8_t *data, size_t size);
 
 // functions to simulate I2C using sockets
-bool socket_write(char *buff, size_t size);
-bool socket_read(char *buff);
+bool socket_write(uint8_t register_address, char *buff);
+bool socket_read(uint8_t register_address, char *buf, size_t size);
 
 #endif // I2C_H

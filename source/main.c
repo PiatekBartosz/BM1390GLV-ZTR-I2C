@@ -8,8 +8,14 @@ int main(void) {
   i2c_init();
 
   while (1) {
+    float pressure, temperature;
+
     BM1390GLV_ZTR_cfg();
-    BM1390GLV_ZTR_read();
+    BM1390GLV_ZTR_read(&pressure, &temperature);
+
+    printf("Pressure: %f\n", pressure);
+    printf("Temperature: %f\n", temperature);
+
     break;
   }
 

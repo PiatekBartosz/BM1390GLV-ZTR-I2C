@@ -54,9 +54,9 @@ bool i2c_start(void) {
     return false;
   }
 
-  /* Simulate it by sending: */
+  /* Simulate starting condition */
   char buff[BUFFER_SIZE] = "START CONDITION";
-  return socket_write(buff, sizeof(buff));
+  return socket_start_condition(buff);
 }
 
 bool i2c_stop(void) {
@@ -74,11 +74,13 @@ bool i2c_address(uint8_t addr) {
    * 3. Clear addr by reading SR1 and SR2
    */
 
-  i2c_slave_addr = addr;
+  // in STM32 I2C 7-bit address must be shifted left by 1 when setting DR
+  // register
+  i2c_slave_addr = (addr << 1);
   return true;
 }
 
-bool i2c_write(uint8_t *data, size_t size) {
+bool i2c_write(uint8_t register_address, uint8_t *data) {
   /* What would this function do on registers:
    * 1. Set the address of the slave device with which we want to communicate
    * 2. Set the register address we want to write to
@@ -128,29 +130,35 @@ bool i2c_read(uint8_t register_address, uint8_t *data, size_t size) {
     printf("I2C address not changed\n");
     return false;
   }
-
-  char buff[BUFFER_SIZE];
 }
 
-bool socket_write(char *buff, size_t size) {
+bool socket_start_condition(char *buff) {
+  /* simulating staring of I2C frame */
+
   if (sockfd < 0) {
     printf("I2C was not initialized\n");
     return false;
   }
 
-  ssize_t ret;
-  ret = read(sockfd, buff, sizeof(buff));
-  printf("From Server in CLient: %s\n", buff);
+  ssize_t ret_write = write(sockfd, buff, sizeof(buff));
 
-  // TODO change return value
-  if (ret < 0) {
-    printf("Error writing to server\n");
+  bzero(buff, sizeof(buff));
+
+  ssize_t ret_read = read(sockfd, buff, sizeof(buff));
+
+  if ((ret_read < 0) || (ret_write < 0)) {
+    printf("Error writing or reading server\n");
+    return false;
+  }
+
+  if (strcmp(buff, "START CONDITION") != 0) {
+    printf("Error sending START condition\n");
     return false;
   }
   return true;
 }
 
-bool socket_read(char *buff) {
+bool socket_write(uint8_t register_address, char *buff) {
   if (sockfd < 0) {
     printf("I2C was not initialized\n");
     return false;
@@ -158,7 +166,29 @@ bool socket_read(char *buff) {
 
   ssize_t ret;
   ret = read(sockfd, buff, sizeof(buff));
-  printf("From Server in CLient: %s\n", buff);
+
+  if (ret < 0) {
+    printf("Error writing to server\n");
+    return false;
+  }
+
+  return true;
+}
+
+bool socket_read(uint8_t register_address, char *buf, size_t size) {
+  if (sockfd < 0) {
+    printf("I2C was not initialized\n");
+    return false;
+  }
+
+  ssize_t ret;
+  // send slave address (7-bit) + read bit & expect ACK
+
+  // send register address & expect ACK
+
+  for (size_t i = 0; i < size; ++i) {
+    // expect data & acknowledge
+  }
 
   // TODO change return value
   if (ret < 0) {
