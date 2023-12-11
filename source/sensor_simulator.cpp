@@ -5,6 +5,14 @@
 
 int main(void) {
 
+#ifdef _WIN32
+  WSADATA wsaData;
+  if (WSASTARTUP(MAKEWORD(2, 2), &wsaData) != 0) {
+    std::cerr << "WSAStartup failed." << std::endl;
+    return -1;
+  }
+#endif
+
   // socket programming
   int sockfd, connfd, len;
   struct sockaddr_in servaddr, cli;
@@ -76,8 +84,15 @@ int main(void) {
   }
 
   iFile.close();
+
+#ifdef _WIN32
+  closesocket(sockfd);
+  closesocket(connfd);
+  WSACleanup();
+#else
   close(connfd);
   close(sockfd);
+#endif
 
   return 0;
 }
@@ -153,8 +168,8 @@ int handleClient(int connfd, volatile SensorRegisters *sensorRegisters) {
 
   write(connfd, "OK", sizeof("OK"));
 
-
   // read(connfd, buff, sizeof(buff));
 
   // TODO later, for now send echo
+  return 0;
 }

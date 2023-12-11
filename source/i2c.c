@@ -20,6 +20,13 @@ int i2c_init(void) {
    */
 
   /* Simulate it by configuring socket: */
+#ifdef _WIN32
+  WSADATA wsa;
+  if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+    printf("Error initializing socket\n");
+    return -1;
+  }
+#endif
 
   // create a TCP client
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -56,7 +63,7 @@ bool i2c_start(void) {
 
   /* Simulate starting condition */
   char buff[BUFFER_SIZE] = "START CONDITION";
-  bool ret =  socket_start_condition(buff);
+  bool ret = socket_start_condition(buff);
   return ret;
 }
 
@@ -64,6 +71,13 @@ bool i2c_stop(void) {
   /* What would this function do on registers:
    * 1. Stop I2C
    */
+
+#ifdef _WIN32
+  closesocket(sockfd);
+  WSACleanup();
+#else
+  close(sockfd);
+#endif
 
   return true;
 }
@@ -76,7 +90,7 @@ bool i2c_address(uint8_t addr) {
    */
 
   // in STM32 I2C 7-bit address must be shifted left by 1 when setting DR
-  // register
+  // register as the 0-bit will be used to indicate R/W
   i2c_slave_addr = (addr << 1);
   return true;
 }

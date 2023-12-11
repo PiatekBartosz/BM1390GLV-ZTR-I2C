@@ -1,16 +1,25 @@
 #ifndef I2C_H
 #define I2C_H
 
+// cross-platform socket programming
+// for Windows
+#ifdef _WIN32
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32.lib")
+// for Linux
+#else
 #include <arpa/inet.h> // inet_addr()
 #include <netdb.h>
+#include <sys/socket.h>
+#include <unistd.h> // read(), write(), close()
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h> // bzero()
-#include <sys/socket.h>
-#include <unistd.h> // read(), write(), close()
 
 #define IP "127.0.0.1"
 #define PORT 8080
