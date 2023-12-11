@@ -6,7 +6,6 @@
 #include <vector>
 
 // includes for socket programming
-
 #include <arpa/inet.h> // inet_addr()
 #include <netdb.h>
 #include <stdbool.h>
