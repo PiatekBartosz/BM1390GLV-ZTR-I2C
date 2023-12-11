@@ -25,6 +25,7 @@ bool i2c_write(uint8_t register_address, uint8_t *data);
 bool i2c_read(uint8_t register_address, uint8_t *data, size_t size);
 
 // functions to simulate I2C using sockets
+bool socket_start_condition(char *buff);
 bool socket_write(uint8_t register_address, char *buff);
 bool socket_read(uint8_t register_address, char *buf, size_t size);
 

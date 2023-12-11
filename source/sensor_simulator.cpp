@@ -1,5 +1,8 @@
 #include "sensor_simulator.hpp"
 
+#define COUNTS_PER_HPASCAL 2048 // TODO: check if correct
+#define COUNTS_PER_CELSIUS 32
+
 int main(void) {
 
   // socket programming
@@ -31,6 +34,7 @@ int main(void) {
   // file reading
   const char *relativeDataPath = "../data/222.txt";
   volatile SensorRegisters sensorRegisters;
+  initSensorRegisters(&sensorRegisters);
 
   std::ifstream iFile(relativeDataPath);
   std::string line;
@@ -41,22 +45,35 @@ int main(void) {
   }
 
   while (1) {
-    connfd = accept(sockfd, (struct sockaddr *)&cli, (socklen_t *)&len);
-    
-    if (connfd < 0) {
-      std::cout << "Server acccept failed..." << std::endl;
-      return -1;
+
+    if (std::getline(iFile, line)) {
+      uint32_t pressure;
+      float temperature;
+
+      parseLine(line, pressure, temperature);
+
+      // refill registers with current data
+      putPressTempDataRegisters(&sensorRegisters, pressure, temperature);
+
+      connfd = accept(sockfd, (struct sockaddr *)&cli, (socklen_t *)&len);
+
+      if (connfd < 0) {
+        std::cout << "Server acccept failed..." << std::endl;
+        return -1;
+      }
+
+      // handles client requests with I2C simulation
+      int ret = handleClient(connfd, &sensorRegisters);
+      if (ret != 0) {
+        std::cerr << "Error handling client" << std::endl;
+        return -1;
+      }
     }
 
-    handleclient(connfd, &sensorRegisters);
-
+    else {
+      break;
+    }
   }
-
-  // while (std::getline(iFile, line)) {
-  //   std::cout << "Read data from file: " << line << std::endl;
-  //   parseLine(line, &sensorRegisters);
-  //   break;
-  // }
 
   iFile.close();
   close(connfd);
@@ -65,72 +82,79 @@ int main(void) {
   return 0;
 }
 
-int parseLine(std::string line, volatile SensorRegisters *sensorRegisters) {
-  // TODO change vector to packing the struct
-  std::vector<std::string> results;
+int parseLine(std::string &line, uint32_t &pressure, float &temperature) {
+
   std::vector<std::string> delimiters = {
       "SRC:   ", "CNT: ", "DSTR: ", "MODE: ", "EXC: ",  "WID:   ", "GID:   ",
       "BAT:  ",  "PRS: ", "TMP: ",  "TS: ",   "RSSI: ", "FPPL: ",  "CSQ: "};
 
-  for (std::size_t i = 1; i < delimiters.size() - 1; ++i) {
+  size_t pressurePos = line.find(delimiters[8]) + delimiters[8].size();
+  size_t temperaturePos = line.find(delimiters[9]) + delimiters[9].size();
 
-    std::string::size_type pos = line.find(delimiters[i]);
-    if (pos == std::string::npos) {
-      std::cerr << "Unable to find delimiter: " << delimiters[i + 1]
-                << std::endl;
-      return -1;
-    }
+  std::string pressure_str =
+      line.substr(pressurePos, line.find(delimiters[9]) - pressurePos - 1);
+  std::string temperature_str = line.substr(
+      temperaturePos, line.find(delimiters[10]) - temperaturePos - 1);
 
-    std::string token = line.substr(0, pos);
+  std::cout << "Pressure: " << pressure_str << std::endl;
+  std::cout << "Temperature: " << temperature_str << std::endl;
 
-    // put CNT
-    // if (i == 1)
-
-    // put PRS
-    if (i == 9) {
-      std::cout << "PRS: " << token << std::endl;
-    }
-
-    // put TMP
-    if (i == 10) {
-      std::cout << "TMP: " << token << std::endl;
-    }
-
-    // std::cout << "Token: " << token << std::endl;
-
-    line = line.substr(pos, line.size());
+  try {
+    pressure = std::stoi(pressure_str);
+    temperature = std::stof(temperature_str);
+  } catch (const std::invalid_argument &e) {
+    std::cerr << "Error converting string to float/int: " << e.what()
+              << std::endl;
+    return 1; // Return an error code
+  } catch (const std::out_of_range &e) {
+    // Handle the case where the converted value is out of range
+    std::cerr << "Error: " << e.what() << std::endl;
+    return 1; // Return an error code
   }
 
   return 0;
 }
 
 int initSensorRegisters(volatile SensorRegisters *sensorRegisters) {
-  sensorRegisters->manufacturerIdAddr = MANUFACTURER_ID;
-  sensorRegisters->partIdAddr = PART_ID;
+  sensorRegisters->manufacturerId.data = MANUFACTURER_ID;
+  sensorRegisters->partId.data = PART_ID;
   return 0;
 }
 
-void handleclient(int connfd, volatile SensorRegisters *sensorRegisters) {
+// TODO: make test
+int putPressTempDataRegisters(volatile SensorRegisters *sensorRegisters,
+                              uint32_t pressure, float temperature) {
+
+  uint32_t raw_pressure = static_cast<uint32_t>(pressure * COUNTS_PER_HPASCAL);
+  sensorRegisters->pressureOutHigh.data = (raw_pressure >> 16) & 0xFF;
+  sensorRegisters->pressureOutLow.data = (raw_pressure >> 8) & 0xFF;
+  sensorRegisters->pressureOutXl.data = raw_pressure & 0xFF;
+
+  // There might be a loss in precision because of float preccision
+  int32_t raw_temperature =
+      static_cast<int32_t>(temperature * COUNTS_PER_CELSIUS);
+  sensorRegisters->temperatureOutHigh.data = (raw_temperature >> 8) & 0xFF;
+  sensorRegisters->temperatureOutLow.data = raw_temperature & 0xFF;
+  return 0;
+}
+
+int handleClient(int connfd, volatile SensorRegisters *sensorRegisters) {
   char buff[BUFFER_SIZE];
   int n;
-
   bzero(buff, sizeof(buff));
 
+  // Expect START CONDITION
   read(connfd, buff, sizeof(buff));
-
+  if (strcmp(buff, "START") != 0) {
+    std::cerr << "Expected START CONDITION" << std::endl;
+    return 1;
+  }
   printf("Received data from client: %s \n", buff);
-  bzero(buff, sizeof(buff));
-  n = 0;
 
-  /*
-    DO FILE READING HERE 
-    IF reached EOF, break loop
-  */
+  write(connfd, "OK", sizeof("OK"));
 
-  // copy server message in the buffer
-  while ((buff[n++] = getchar()) != '\n')
-    ;
+
+  // read(connfd, buff, sizeof(buff));
 
   // TODO later, for now send echo
-  write(connfd, buff, sizeof(buff));
 }

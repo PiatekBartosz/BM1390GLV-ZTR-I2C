@@ -56,7 +56,8 @@ bool i2c_start(void) {
 
   /* Simulate starting condition */
   char buff[BUFFER_SIZE] = "START CONDITION";
-  return socket_start_condition(buff);
+  bool ret =  socket_start_condition(buff);
+  return ret;
 }
 
 bool i2c_stop(void) {

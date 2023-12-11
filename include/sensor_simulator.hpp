@@ -1,9 +1,9 @@
-#include <iostream>
 #include <fstream>
-#include <string>
-#include <stdint.h>
-#include <vector>
+#include <iostream>
 #include <sstream>
+#include <stdint.h>
+#include <string>
+#include <vector>
 
 // includes for socket programming
 
@@ -40,64 +40,69 @@
 typedef uint8_t RegisterAddress;
 
 typedef union {
-    // used to acces individual bits
-    struct {
-        uint8_t bit0 : 1;
-        uint8_t bit1 : 1;
-        uint8_t bit2 : 1;
-        uint8_t bit3 : 1;
-        uint8_t bit4 : 1;
-        uint8_t bit5 : 1;
-        uint8_t bit6 : 1;
-        uint8_t bit7 : 1;
-    } u;
+  // used to acces individual bits
+  struct {
+    uint8_t bit0 : 1;
+    uint8_t bit1 : 1;
+    uint8_t bit2 : 1;
+    uint8_t bit3 : 1;
+    uint8_t bit4 : 1;
+    uint8_t bit5 : 1;
+    uint8_t bit6 : 1;
+    uint8_t bit7 : 1;
+  } u;
 
-    uint8_t data;
+  uint8_t data;
 
 } Register;
 
 typedef struct {
-    RegisterAddress manufacturerIdAddr;
-    Register manufacturerId;
+  RegisterAddress manufacturerIdAddr;
+  Register manufacturerId;
 
-    RegisterAddress partIdAddr;
-    Register partId;
+  RegisterAddress partIdAddr;
+  Register partId;
 
-    RegisterAddress powerDownAddr;
-    Register powerDown;
+  RegisterAddress powerDownAddr;
+  Register powerDown;
 
-    RegisterAddress resetAddr;
-    Register reset;
+  RegisterAddress resetAddr;
+  Register reset;
 
-    RegisterAddress modeControlAddr;
-    Register modeControl;
+  RegisterAddress modeControlAddr;
+  Register modeControl;
 
-    RegisterAddress fifoControlAddr;
-    Register fifoControl;
+  RegisterAddress fifoControlAddr;
+  Register fifoControl;
 
-    RegisterAddress fifoDataAddr;
-    Register fifoData;
+  RegisterAddress fifoDataAddr;
+  Register fifoData;
 
-    RegisterAddress statusAddr;
-    Register status;
+  RegisterAddress statusAddr;
+  Register status;
 
-    RegisterAddress pressureOutHighAddr;
-    Register pressureOutHigh;
+  RegisterAddress pressureOutHighAddr;
+  Register pressureOutHigh;
 
-    RegisterAddress pressureOutLowAddr;
-    Register pressureOutLow;
+  RegisterAddress pressureOutLowAddr;
+  Register pressureOutLow;
 
-    RegisterAddress pressureOutXlAddr;
-    Register pressureOutXl;
+  RegisterAddress pressureOutXlAddr;
+  Register pressureOutXl;
 
-    RegisterAddress temperatureOutHighAddr;
-    Register temperatureOutHigh;
+  RegisterAddress temperatureOutHighAddr;
+  Register temperatureOutHigh;
 
-    RegisterAddress temperatureOutLowAddr;
-    Register temperatureOutLow;
+  RegisterAddress temperatureOutLowAddr;
+  Register temperatureOutLow;
 
 } SensorRegisters;
 
-int parseLine(std::string line, volatile SensorRegisters *sensorRegisters); 
+int parseLine(std::string &line, uint32_t &pressure, float &temperature);
+
 int initSensorRegisters(volatile SensorRegisters *sensorRegisters);
-void handleclient(int connfd, volatile SensorRegisters *sensorRegisters);
+
+int putPressTempDataRegisters(volatile SensorRegisters *sensorRegisters,
+                              uint32_t pressure, float temperature);
+
+int handleClient(int connfd, volatile SensorRegisters *sensorRegisters);

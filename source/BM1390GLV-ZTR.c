@@ -50,6 +50,7 @@ void BM1390GLV_ZTR_read(float *pressure, float *temperature) {
   *temperature = calculate_celsius(temperature_raw);
 }
 
+// TODO: make test
 float calculate_hpascal(uint32_t pressure_raw) {
   float pressure = (float)pressure_raw / COUNTS_PER_HPASCAL;
 
@@ -61,6 +62,7 @@ float calculate_hpascal(uint32_t pressure_raw) {
   return pressure;
 }
 
+// TODO make test
 float calculate_celsius(int32_t temperature_raw) {
   float temperature = (float)temperature_raw / COUNTS_PER_CELSIUS;
 
