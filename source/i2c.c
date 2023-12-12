@@ -37,9 +37,6 @@ int i2c_init(void) {
     return -1;
   }
 
-  // zero a block of memory
-  bzero(&servaddr, sizeof(servaddr));
-
   servaddr.sin_family = AF_INET;
   servaddr.sin_addr.s_addr = inet_addr(IP);
   servaddr.sin_port = htons(PORT);
@@ -116,9 +113,8 @@ bool i2c_write(uint8_t register_address, uint8_t *data) {
   char buff[BUFFER_SIZE];
   int n;
 
-  bzero(buff, sizeof(buff));
   strcpy(buff, "Hello from client");
-  ssize_t ret = write(sockfd, buff, sizeof(buff));
+  int ret = write(sockfd, buff, sizeof(buff));
 
   if (ret < 0) {
     printf("Error writing to server\n");
@@ -155,11 +151,9 @@ bool socket_start_condition(char *buff) {
     return false;
   }
 
-  ssize_t ret_write = write(sockfd, buff, sizeof(buff));
+  int ret_write = write(sockfd, buff, sizeof(buff));
 
-  bzero(buff, sizeof(buff));
-
-  ssize_t ret_read = read(sockfd, buff, sizeof(buff));
+  int ret_read = read(sockfd, buff, sizeof(buff));
 
   if ((ret_read < 0) || (ret_write < 0)) {
     printf("Error writing or reading server\n");
@@ -179,8 +173,7 @@ bool socket_write(uint8_t register_address, char *buff) {
     return false;
   }
 
-  ssize_t ret;
-  ret = read(sockfd, buff, sizeof(buff));
+  int ret = read(sockfd, buff, sizeof(buff));
 
   if (ret < 0) {
     printf("Error writing to server\n");
@@ -196,19 +189,8 @@ bool socket_read(uint8_t register_address, char *buf, size_t size) {
     return false;
   }
 
-  ssize_t ret;
-  // send slave address (7-bit) + read bit & expect ACK
+  
 
-  // send register address & expect ACK
 
-  for (size_t i = 0; i < size; ++i) {
-    // expect data & acknowledge
-  }
-
-  // TODO change return value
-  if (ret < 0) {
-    printf("Error writing to server\n");
-    return false;
-  }
   return true;
 }

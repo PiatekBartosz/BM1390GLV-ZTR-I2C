@@ -3,18 +3,20 @@
 #define COUNTS_PER_HPASCAL 2048 // TODO: check if correct
 #define COUNTS_PER_CELSIUS 32
 
+static int sockfd, connfd;
+
 int main(void) {
 
 #ifdef _WIN32
   WSADATA wsaData;
-  if (WSASTARTUP(MAKEWORD(2, 2), &wsaData) != 0) {
+  if (WSAStartup(MAKEWORD(1, 1), &wsaData) != 0) {
     std::cerr << "WSAStartup failed." << std::endl;
     return -1;
   }
 #endif
 
   // socket programming
-  int sockfd, connfd, len;
+  int len;
   struct sockaddr_in servaddr, cli;
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -146,8 +148,8 @@ int putPressTempDataRegisters(volatile SensorRegisters *sensorRegisters,
   sensorRegisters->pressureOutXl.data = raw_pressure & 0xFF;
 
   // There might be a loss in precision because of float preccision
-  int32_t raw_temperature =
-      static_cast<int32_t>(temperature * COUNTS_PER_CELSIUS);
+  uint32_t raw_temperature =
+      static_cast<uint32_t>(temperature * COUNTS_PER_CELSIUS);
   sensorRegisters->temperatureOutHigh.data = (raw_temperature >> 8) & 0xFF;
   sensorRegisters->temperatureOutLow.data = raw_temperature & 0xFF;
   return 0;
@@ -156,20 +158,38 @@ int putPressTempDataRegisters(volatile SensorRegisters *sensorRegisters,
 int handleClient(int connfd, volatile SensorRegisters *sensorRegisters) {
   char buff[BUFFER_SIZE];
   int n;
-  bzero(buff, sizeof(buff));
 
   // Expect START CONDITION
-  read(connfd, buff, sizeof(buff));
+  socket_read(buff, sizeof(buff));
   if (strcmp(buff, "START") != 0) {
     std::cerr << "Expected START CONDITION" << std::endl;
     return 1;
   }
   printf("Received data from client: %s \n", buff);
 
-  write(connfd, "OK", sizeof("OK"));
+  
+  socket_write(buff, sizeof(buff));
 
   // read(connfd, buff, sizeof(buff));
 
   // TODO later, for now send echo
+  return 0;
+}
+
+int socket_read(char *buff, int buff_size) {
+#ifdef _WIN32
+  recv(connfd, buff, sizeof(buff), 0);
+#else
+  read(connfd, buff, sizeof(buff));
+#endif
+  return 0;
+}
+
+int socket_write(char *buff, int buff_size) {
+#ifdef _WIN32
+  send(connfd, buff, sizeof(buff), 0);
+#else
+  write(connfd, buff, sizeof(buff);
+#endif
   return 0;
 }

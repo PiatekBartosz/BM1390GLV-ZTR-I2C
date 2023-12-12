@@ -5,6 +5,7 @@
 // for Windows
 #ifdef _WIN32
 #include <winsock2.h>
+#include<ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 // for Linux
 #else
@@ -35,7 +36,7 @@ bool i2c_read(uint8_t register_address, uint8_t *data, size_t size);
 
 // functions to simulate I2C using sockets
 bool socket_start_condition(char *buff);
-bool socket_write(uint8_t register_address, char *buff);
-bool socket_read(uint8_t register_address, char *buf, size_t size);
+bool socket_write(char *buff, size_t size);
+bool socket_read(char *buff, size_t size);
 
 #endif // I2C_H

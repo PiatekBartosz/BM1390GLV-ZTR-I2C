@@ -9,6 +9,7 @@
 // for Windows
 #ifdef _WIN32
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 // for Linux
 #else
@@ -113,3 +114,6 @@ int putPressTempDataRegisters(volatile SensorRegisters *sensorRegisters,
                               uint32_t pressure, float temperature);
 
 int handleClient(int connfd, volatile SensorRegisters *sensorRegisters);
+
+int socket_read(char *buff, int buff_size);
+int socket_write(char *buff, int buff_size);
