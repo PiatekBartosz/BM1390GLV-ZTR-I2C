@@ -6,7 +6,7 @@
  */
 
 #define IP "127.0.0.1"
-#define PORT 8080
+#define PORT 8082
 #define BUFFER_SIZE 1024
 
 static int sockfd = -1;
@@ -24,7 +24,7 @@ int i2c_init(void) {
    */
 
   /* Simulate it by configuring socket: */
-#ifdef _WIN32 
+#ifdef _WIN32
   WSADATA wsa;
   if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
     printf("Error initializing socket\n");
@@ -141,7 +141,7 @@ bool i2c_read(uint8_t register_address, uint8_t *data, size_t size) {
 
   /* I2C frame simulation: */
 
-  /* Send slave address with and expect aknowledge*/ 
+  /* Send slave address with and expect aknowledge*/
   uint8_t slave_adr_with_read_bit = i2c_slave_addr | 0x01;
   uint8_t aknowledge_bit = 0xFF; // have to simulate aknowledge bit with a byte
   uint8_t buff[2] = {slave_adr_with_read_bit, aknowledge_bit};
@@ -180,7 +180,7 @@ bool i2c_read(uint8_t register_address, uint8_t *data, size_t size) {
 
   /* Read register data */
   for (size_t i = 0; i < size; ++i) {
-    buff[0] = 0x00;  
+    buff[0] = 0x00;
     buff[1] = 0xFF;
     ret = socket_write(buff, 2);
     if (!ret) {
@@ -204,7 +204,7 @@ bool i2c_read(uint8_t register_address, uint8_t *data, size_t size) {
 bool socket_start_condition() {
   /* simulating staring condition of I2C frame */
 
-  char *buff = "START CONDITION";
+  char buff[BUFFER_SIZE] = "START CONDITION";
   if (sockfd < 0) {
     printf("I2C was not initialized\n");
     return false;
@@ -222,12 +222,13 @@ bool socket_start_condition() {
     printf("Error sending START condition\n");
     return false;
   }
-  printf("Master: START CONDITION accepted\n");
+  // TODO: only for test
+  while (1)
+    ;
   return true;
 }
 
-bool socket_stop_condition()
-{
+bool socket_stop_condition() {
   char *buff = "STOP CONDITION";
   if (sockfd < 0) {
     printf("I2C was not initialized\n");
@@ -235,6 +236,7 @@ bool socket_stop_condition()
   }
 
   socket_write(buff, strlen(buff));
+  memset(buff, 0, strlen(buff));
   socket_read(buff, strlen(buff));
 
   // if ((ret_read < 0) || (ret_write < 0)) {
@@ -246,7 +248,7 @@ bool socket_stop_condition()
     printf("Error sending STOP condition\n");
     return false;
   }
-  return true; 
+  return true;
 }
 
 bool socket_read(char *buff, size_t byte_count) {
@@ -256,15 +258,18 @@ bool socket_read(char *buff, size_t byte_count) {
   }
 
 #ifdef _WIN32
-  int ret = recv(sockfd, buff, byte_count, 0);
+  int ret = recv(sockfd, buff, BUFFER_SIZE, 0);
 #else
-  int ret = read(sockfd, buff, byte_count);
+  int ret = read(sockfd, buff, BUFFER_SIZE);
 #endif
 
-  if (ret == SOCKET_ERROR) {
+  if (ret < 0) {
     printf("Error writing to server\n");
     return false;
   }
+
+  // TODO: only for tests
+  printf("Master: Socket read %s\n", buff);
 
   return true;
 }
@@ -276,15 +281,18 @@ bool socket_write(char *buff, size_t byte_count) {
   }
 
 #ifdef _WIN32
-  int ret = send(sockfd, buff, byte_count, 0);
+  int ret = send(sockfd, buff, BUFFER_SIZE, 0);
 #else
-  int ret = write(sockfd, buff, byte_count);
+  int ret = write(sockfd, buff, BUFFER_SIZE);
 #endif
 
   if (ret < 0) {
     printf("Error writing to server\n");
     return false;
   }
+
+  // TODO: only for tests
+  printf("Master: Socket write %s\n", buff);
 
   return true;
 }

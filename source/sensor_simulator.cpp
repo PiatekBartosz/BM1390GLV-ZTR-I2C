@@ -6,25 +6,30 @@
 #define COUNTS_PER_CELSIUS 32
 
 #define IP "127.0.0.1"
-#define PORT 8080
+#define PORT 8082
 #define BUFFER_SIZE 1024
 
-static int sockfd, connfd;
+static int sockfd = -1;
+static int connfd = -1;
 
 int main(void) {
 
-  #ifdef _WIN32
+#ifdef _WIN32
   WSADATA wsaData;
   if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
     std::cerr << "WSAStartup failed." << std::endl;
     return -1;
   }
-  #endif
+#endif
 
   // socket programming
   int len;
   struct sockaddr_in serv_addr, client_addr;
+#ifdef _WIN32
   int client_addr_len = sizeof(client_addr);
+#else
+  socklen_t client_addr_len = sizeof(client_addr);
+#endif
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd == -1) {
@@ -38,19 +43,23 @@ int main(void) {
 
   if ((bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) != 0) {
     std::cout << "Socket bind failed..." << std::endl;
+#ifdef _WIN32
     closesocket(sockfd);
-    #ifdef _WIN32
     WSACleanup();
-    #endif
+#else
+    close(sockfd);
+#endif
     return -1;
   }
 
   if ((listen(sockfd, 5)) != 0) {
     std::cout << "Listen failed..." << std::endl;
+#ifdef _WIN32
     closesocket(sockfd);
-    #ifdef _WIN32
     WSACleanup();
-    #endif
+#else
+    close(sockfd);
+#endif
     return -1;
   }
 
@@ -69,21 +78,21 @@ int main(void) {
     return -1;
   }
 
-  // TODO check if it needs to be in while loop
-  connfd = accept(sockfd, (struct sockaddr *)&client_addr, &client_addr_len);
-
-  if (connfd < 0) {
-    std::cout << "Server acccept failed..." << std::endl;
-    #ifdef _WIN32
-    closesocket(sockfd);
-    WSACleanup();
-    #else
-    close(serverSocket);
-    #endif
-    return 1;
-  }
-
   while (1) {
+
+    // TODO check if it needs to be in while loop
+    connfd = accept(sockfd, (struct sockaddr *)&client_addr, &client_addr_len);
+
+    if (connfd < 0) {
+      std::cout << "Server acccept failed..." << std::endl;
+#ifdef _WIN32
+      closesocket(sockfd);
+      WSACleanup();
+#else
+      close(sockfd);
+#endif
+      return 1;
+    }
 
     if (std::getline(iFile, line)) {
       uint32_t pressure;
@@ -114,14 +123,14 @@ int main(void) {
 
   iFile.close();
 
-  #ifdef _WIN32
+#ifdef _WIN32
   closesocket(sockfd);
   closesocket(connfd);
   WSACleanup();
-  #else
+#else
   close(connfd);
   close(sockfd);
-  #endif
+#endif
 
   return 0;
 }
@@ -188,7 +197,7 @@ int handleClient(volatile SensorRegisters *sensorRegisters) {
 
   // Expect I2C START CONDITION
   int start_condition_len = strlen("START CONDITION");
-  socket_read(buff, start_condition_len);
+  socket_read(buff, BUFFER_SIZE);
   if (strcmp(buff, "START CONDITION") != 0) {
     std::cerr << "Expected START CONDITION" << std::endl;
     return 1;
@@ -196,34 +205,42 @@ int handleClient(volatile SensorRegisters *sensorRegisters) {
   std::cout << "Slave: Got start condition" << std::endl;
   socket_write(buff, start_condition_len);
 
+  //TODO: only for test
+  while(1);
+
   char recv_buff[2];
   // Expect I2C SLAVE ADDRESS & ACK
   socket_read(recv_buff, 2);
-  uint8_t slave_address = (uint8_t) recv_buff[0];
-  uint8_t ack = (uint8_t) recv_buff[1];
+  uint8_t slave_address = (uint8_t)recv_buff[0];
+  uint8_t ack = (uint8_t)recv_buff[1];
 
   // Expect I2C REGISTER ADDRESS & ACK
 
   // Send I2C REGISTER DATA & ACK
-
 
   return 0;
 }
 
 int socket_read(char *buff, int byte_count) {
 #ifdef _WIN32
-  recv(connfd, buff, byte_count, 0);
+  recv(connfd, buff, BUFFER_SIZE, 0);
 #else
-  read(connfd, buff, byte_count);
+  read(connfd, buff, BUFFER_SIZE);
 #endif
+
+  // TODO: only for tests
+  printf("Slave: Socket read: %s\n", buff);
   return 0;
 }
 
 int socket_write(char *buff, int byte_count) {
 #ifdef _WIN32
-  send(connfd, buff, byte_count, 0);
+  send(connfd, buff, BUFFER_SIZE, 0);
 #else
-  write(connfd, buff, byte_count);
+  write(connfd, buff, BUFFER_SIZE);
 #endif
+
+  // TODO: only for tests
+  printf("Slave: Socket write: %s\n", buff);
   return 0;
 }
