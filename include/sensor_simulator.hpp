@@ -107,7 +107,7 @@ int initSensorRegisters(volatile SensorRegisters *sensorRegisters);
 int putPressTempDataRegisters(volatile SensorRegisters *sensorRegisters,
                               uint32_t pressure, float temperature);
 
-int handleClient(int connfd, volatile SensorRegisters *sensorRegisters);
+int handleClient(volatile SensorRegisters *sensorRegisters);
 
 int socket_read(char *buff, int buff_size);
 int socket_write(char *buff, int buff_size);

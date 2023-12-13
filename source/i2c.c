@@ -24,7 +24,7 @@ int i2c_init(void) {
    */
 
   /* Simulate it by configuring socket: */
-#ifdef _WIN32
+#ifdef _WIN32 
   WSADATA wsa;
   if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
     printf("Error initializing socket\n");
@@ -34,6 +34,7 @@ int i2c_init(void) {
 
   // create a TCP client
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
   struct sockaddr_in servaddr;
 
   if (sockfd < 0) {
@@ -201,7 +202,7 @@ bool i2c_read(uint8_t register_address, uint8_t *data, size_t size) {
 }
 
 bool socket_start_condition() {
-  /* simulating staring of I2C frame */
+  /* simulating staring condition of I2C frame */
 
   char *buff = "START CONDITION";
   if (sockfd < 0) {
@@ -255,15 +256,15 @@ bool socket_read(char *buff, size_t byte_count) {
   }
 
 #ifdef _WIN32
-  recv(sockfd, buff, byte_count, 0);
+  int ret = recv(sockfd, buff, byte_count, 0);
 #else
-  read(sockfd, buff, byte_count);
+  int ret = read(sockfd, buff, byte_count);
 #endif
 
-  // if (ret < 0) {
-  //   printf("Error writing to server\n");
-  //   return false;
-  // }
+  if (ret == SOCKET_ERROR) {
+    printf("Error writing to server\n");
+    return false;
+  }
 
   return true;
 }
@@ -275,15 +276,15 @@ bool socket_write(char *buff, size_t byte_count) {
   }
 
 #ifdef _WIN32
-  send(sockfd, buff, byte_count, 0);
+  int ret = send(sockfd, buff, byte_count, 0);
 #else
-  write(sockfd, buff, byte_count);
+  int ret = write(sockfd, buff, byte_count);
 #endif
 
-  // if (ret < 0) {
-  //   printf("Error writing to server\n");
-  //   return false;
-  // }
+  if (ret < 0) {
+    printf("Error writing to server\n");
+    return false;
+  }
 
   return true;
 }

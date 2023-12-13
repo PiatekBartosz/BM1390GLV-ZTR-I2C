@@ -2,7 +2,6 @@
 #include "i2c.h"
 
 int main(void) {
-  printf("Hello from main.c\n");
   BM1390GLV_ZTR_init();
 
   i2c_init();

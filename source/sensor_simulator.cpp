@@ -100,7 +100,7 @@ int main(void) {
       }
 
       // handles client requests with I2C simulation
-      int ret = handleClient(connfd, &sensorRegisters);
+      int ret = handleClient(&sensorRegisters);
       if (ret != 0) {
         std::cerr << "Error handling client" << std::endl;
         return -1;
@@ -182,7 +182,7 @@ int putPressTempDataRegisters(volatile SensorRegisters *sensorRegisters,
   return 0;
 }
 
-int handleClient(int connfd, volatile SensorRegisters *sensorRegisters) {
+int handleClient(volatile SensorRegisters *sensorRegisters) {
   char buff[BUFFER_SIZE];
   int n;
 
