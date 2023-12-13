@@ -33,7 +33,7 @@ void BM1390GLV_ZTR_cfg(void) {
   i2c_stop();
 }
 
-void BM1390GLV_ZTR_read(float *pressure, float *temperature) {
+void BM1390GLV_ZTR_read(uint32_t *pressure, float *temperature) {
   int8_t raw_data[PRESSURE_AND_TEMPERATURE_DATA_LEN];
 
   i2c_start();
@@ -42,34 +42,31 @@ void BM1390GLV_ZTR_read(float *pressure, float *temperature) {
            PRESSURE_AND_TEMPERATURE_DATA_LEN);
   i2c_stop();
 
-  uint32_t pressure_raw =
-      (raw_data[0] << 16) | (raw_data[1] << 8) | raw_data[2];
-  int32_t temperature_raw = (raw_data[3] << 8) | raw_data[4];
-
-  *pressure = calculate_hpascal(pressure_raw);
-  *temperature = calculate_celsius(temperature_raw);
+  *pressure = calculate_hpascal(raw_data);
+  // *temperature = calculate_celsius(raw_data);
 }
+uint32_t calculate_hpascal(char *raw_data){
 
-// TODO: make test
-float calculate_hpascal(uint32_t pressure_raw) {
-  float pressure = (float)pressure_raw / COUNTS_PER_HPASCAL;
-
-  // outside of sensor range
-  if ((pressure < 300.0) || (pressure > 1300.0)) {
-    return -1.0;
-  }
+  uint32_t pressure = 0;
+  pressure |= (uint32_t) ((uint8_t) raw_data[0] << 16);
+  pressure |= (uint32_t) ((uint8_t) raw_data[1] << 8);
+  pressure |= (uint32_t) ((uint8_t) raw_data[2]);
 
   return pressure;
 }
 
-// TODO make test
-float calculate_celsius(int32_t temperature_raw) {
-  float temperature = (float)temperature_raw / COUNTS_PER_CELSIUS;
+// float calculate_celsius(char *raw_data){
 
-  // outside of sensor range
-  if ((temperature < -40.0) || (temperature > 85.0)) {
-    return -1000.0;
-  }
+//   uint32_t temperature_raw = 0;
+//   temperature_raw |= (uint32_t) ((uint8_t) raw_data[3] << 8); 
+//   temperature_raw |= (uint32_t) ((uint8_t) raw_data[4]);
+//   float temperature;
+//   memcpy(&temperature, &temperature_raw, sizeof(temperature_raw));
 
-  return temperature;
-}
+//   // outside of sensor range
+//   if ((temperature < -40.0) || (temperature > 85.0)) {
+//     return -1000.0;
+//   }
+
+//   return temperature;
+// }

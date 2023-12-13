@@ -27,7 +27,7 @@ int i2c_init(void) {
 #ifdef _WIN32
   WSADATA wsa;
   if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-    printf("Error initializing socket\n");
+    // printf("Error initializing socket\n");
     return -1;
   }
 #endif
@@ -38,7 +38,7 @@ int i2c_init(void) {
   struct sockaddr_in servaddr;
 
   if (sockfd < 0) {
-    printf("Error creating socket\n");
+    // printf("Error creating socket\n");
     return -1;
   }
 
@@ -47,7 +47,7 @@ int i2c_init(void) {
   servaddr.sin_port = htons(PORT);
 
   while (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0) {
-    printf("Error connecting to server\n");
+    // printf("Error connecting to server\n");
   }
   return 0;
 }
@@ -59,7 +59,7 @@ bool i2c_start(void) {
    */
 
   if (sockfd < 0) {
-    printf("I2C was not initialized\n");
+    // printf("I2C was not initialized\n");
     return false;
   }
 
@@ -98,12 +98,12 @@ bool i2c_write(uint8_t register_address, uint8_t *data) {
    */
 
   if (sockfd < 0) {
-    printf("I2C was not initialized\n");
+    // printf("I2C was not initialized\n");
     return false;
   }
 
   if (i2c_slave_addr == 0x00) {
-    printf("I2C address not changed\n");
+    // printf("I2C address not changed\n");
     return false;
   }
 
@@ -130,117 +130,159 @@ bool i2c_read(uint8_t register_address, uint8_t *data, size_t size) {
    */
 
   if (sockfd < 0) {
-    printf("I2C was not initialized\n");
+    // printf("I2C was not initialized\n");
     return false;
   }
 
   if (i2c_slave_addr == 0x00) {
-    printf("I2C address not changed\n");
+    // printf("I2C address not changed\n");
     return false;
   }
 
   /* I2C frame simulation: */
 
-  /* Send slave address with and expect aknowledge*/
-  uint8_t slave_adr_with_read_bit = i2c_slave_addr | 0x01;
+  /* Send slave address with and expect aknowledge (WRITE MODE)*/
+  uint8_t slave_adr_with_write_bit = i2c_slave_addr & 0xFE;
   uint8_t aknowledge_bit = 0xFF; // have to simulate aknowledge bit with a byte
-  uint8_t buff[2] = {slave_adr_with_read_bit, aknowledge_bit};
+  uint8_t buff[2] = {slave_adr_with_write_bit, aknowledge_bit};
   bool ret = socket_write(buff, 2);
   if (!ret) {
-    printf("Error writing to server\n");
+    // printf("Error writing to server\n");
     return false;
   }
   ret = socket_read(buff, 2);
   if (!ret) {
-    printf("Error reading from server\n");
+    // printf("Error reading from server\n");
     return false;
   }
   if (buff[1] != 0x00) {
-    printf("Error with aknowledge I2C slave address\n");
+    // printf("Error with aknowledge I2C slave address\n");
     return false;
   }
+  // printf("Succesfully sent slave address\n");
 
   /* Send register address and expect aknowledge*/
   buff[0] = register_address;
   buff[1] = 0xFF;
   ret = socket_write(buff, 2);
   if (!ret) {
-    printf("Error writing to server\n");
+    // printf("Error writing to server\n");
     return false;
   }
   ret = socket_read(buff, 2);
   if (!ret) {
-    printf("Error reading from server\n");
+    // printf("Error reading from server\n");
     return false;
   }
   if (buff[1] != 0x00) {
-    printf("Error with aknowledge I2C register address\n");
+    // printf("Error with aknowledge I2C register address\n");
+    return false;
+  }
+  // printf("Succesfully sent register address\n");
+
+  /* Send START CONDITION second time */
+  ret = socket_start_condition();
+  if (!ret) {
+    // printf("Error sending START condition\n");
+    return false;
+  }
+  // printf("Succesfully sent START condition 2nd time\n");
+
+  /* Send 2nd time slave address with and expect aknowledge (READ MODE)*/
+  uint8_t slave_adr_with_read_bit = i2c_slave_addr | 0x01;
+  aknowledge_bit = 0xFF; // have to simulate aknowledge bit with a byte
+  buff[0] = slave_adr_with_read_bit;
+  buff[1] = aknowledge_bit;
+  ret = socket_write(buff, 2);
+  if (!ret) {
+    // printf("Error writing to server\n");
+    return false;
+  }
+  ret = socket_read(buff, 2); 
+  if (!ret) {
+    // printf("Error reading from server\n");
+    return false;
+  }
+  if (buff[1] != 0x00) {
+    // printf("Error with aknowledge I2C slave address\n");
+    return false;
+  }
+  // printf("Succesfully send slave address 2nd time\n");
+
+  /* This part is not the part of I2C, now the slave will be sending data.
+     In order to avoid reading 2 times in a row write blank message
+  */
+  buff[0] = 0x00;
+  buff[1] = 0x00;
+  ret = socket_write(buff, 2);
+  if (!ret) {
+    // printf("Error writing to server\n");
     return false;
   }
 
-  /* Read register data */
+  /* Read register data and send aknowledge*/
   for (size_t i = 0; i < size; ++i) {
-    buff[0] = 0x00;
-    buff[1] = 0xFF;
-    ret = socket_write(buff, 2);
-    if (!ret) {
-      printf("Error writing to server\n");
-      return false;
-    }
     ret = socket_read(buff, 2);
     if (!ret) {
-      printf("Error reading from server\n");
-      return false;
-    }
-    if (buff[1] != 0x00) {
-      printf("Error with aknowledge I2C register address\n");
+      // printf("Error reading from server\n");
       return false;
     }
     data[i] = buff[0];
+    buff[1] = 0x00;
+    ret = socket_write(buff, 2); //send 4 bytes as server will check for STOP
+    if(!ret) {
+      // printf("Error writing to server\n");
+      return false;
+    }
+    // printf("Succesfully read data[%d]\n", i);
   }
+  socket_read(buff, 2); // avoid two wirtes (when sendint STOP)
+  // printf("Reading data finished\n");
   return true;
 }
+
 
 bool socket_start_condition() {
   /* simulating staring condition of I2C frame */
 
   char buff[BUFFER_SIZE] = "START";
   if (sockfd < 0) {
-    printf("I2C was not initialized\n");
+    // printf("I2C was not initialized\n");
     return false;
   }
   int ret_write = socket_write(buff, strlen(buff));
   if (ret_write < 0) {
-    printf("Error writing to server\n");
+    // printf("Error writing to server\n");
     return false;
   }
 
   int ret_read = socket_read(buff, strlen(buff));
   if (ret_read < 0) {
-    printf("Error reading server\n");
+    // printf("Error reading server\n");
     return false;
   }
 
   if (strcmp(buff, "START") != 0) {
-    printf("Error sending START condition\n");
+    // printf("Error sending START condition\n");
     return false;
   }
+  else if (strcmp(buff, "END") == 0) {
+    while (1);
+  }
+
   // TODO: only for test
-  printf("Master: Start condition\n");
-  while (1)
-    ;
+  // printf("Master: Start condition\n");
   return true;
 }
 
 bool socket_stop_condition() {
   char *buff = "STOP";
   if (sockfd < 0) {
-    printf("I2C was not initialized\n");
+    // printf("I2C was not initialized\n");
     return false;
   }
 
   socket_write(buff, strlen(buff));
-  memset(buff, 0, strlen(buff));
   socket_read(buff, strlen(buff));
 
   // if ((ret_read < 0) || (ret_write < 0)) {
@@ -248,8 +290,8 @@ bool socket_stop_condition() {
   //   return false;
   // }
 
-  if (strcmp(buff, "STOP CONDITION") != 0) {
-    printf("Error sending STOP condition\n");
+  if (strcmp(buff, "STOP") != 0) {
+    // printf("Error sending STOP condition\n");
     return false;
   }
   return true;
@@ -257,47 +299,46 @@ bool socket_stop_condition() {
 
 bool socket_read(char *buff, size_t byte_count) {
   if (sockfd < 0) {
-    printf("I2C was not initialized\n");
+    // printf("I2C was not initialized\n");
     return false;
   }
 
 #ifdef _WIN32
-  int ret = recv(sockfd, buff, BUFFER_SIZE, 0);
+  int ret = recv(sockfd, buff, byte_count, 0);
 #else
-  int ret = read(sockfd, buff, BUFFER_SIZE);
+  int ret = read(sockfd, buff, byte_count);
 #endif
 
   if (ret < 0) {
-    printf("Error reading from server\n");
+    // printf("Error reading from server\n");
     return false;
   }
 
   // TODO: only for tests
-  printf("Master: Socket read %s\n", buff);
+  // printf("Master: Socket read %s\n", buff);
 
   return true;
 }
 
 bool socket_write(char *buff, size_t byte_count) {
   if (sockfd < 0) {
-    printf("I2C was not initialized\n");
+    // printf("I2C was not initialized\n");
     return false;
   }
 
-// TODO jdflasjfkl;asjklfjdas;lkfjklads;
 #ifdef _WIN32
-  int ret = send(sockfd, buff, BUFFER_SIZE, 0);
+  int ret = send(sockfd, buff, byte_count, 0);
 #else
-  int ret = write(sockfd, buff, BUFFER_SIZE);
+  int ret = write(sockfd, buff, byte_count);
 #endif
 
   if (ret < 0) {
-    printf("Error writing to server\n");
+    // printf("Error writing to server\n");
     return false;
   }
 
   // TODO: only for tests
-  printf("Master: Socket write %s\n", buff);
+  // printf("Master: Socket write %s\n", buff);
 
   return true;
 }

@@ -6,9 +6,9 @@
 
 void BM1390GLV_ZTR_init(void);
 void BM1390GLV_ZTR_cfg(void);
-void BM1390GLV_ZTR_read(float *pressure, float *temperature);
+void BM1390GLV_ZTR_read(uint32_t *pressure, float *temperature);
 
-float calculate_hpascal(uint32_t pressure_raw);
-float calculate_celsius(int32_t temperature_raw);
+uint32_t calculate_hpascal(char *raw_data);
+float calculate_celsius(char *raw_data);
 
 #endif // BM1390GLV_ZTR_H
