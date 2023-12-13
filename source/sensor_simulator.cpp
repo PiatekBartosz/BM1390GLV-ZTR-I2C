@@ -6,8 +6,8 @@
 #define COUNTS_PER_CELSIUS 32
 
 #define IP "127.0.0.1"
-#define PORT 8082
-#define BUFFER_SIZE 1024
+#define PORT 8080
+#define BUFFER_SIZE 100
 
 static int sockfd = -1;
 static int connfd = -1;
@@ -192,20 +192,23 @@ int putPressTempDataRegisters(volatile SensorRegisters *sensorRegisters,
 }
 
 int handleClient(volatile SensorRegisters *sensorRegisters) {
-  char buff[BUFFER_SIZE];
+  char buff[BUFFER_SIZE] = {0};
   int n;
 
   // Expect I2C START CONDITION
-  int start_condition_len = strlen("START CONDITION");
+  int start_condition_len = strlen("START");
   socket_read(buff, BUFFER_SIZE);
-  if (strcmp(buff, "START CONDITION") != 0) {
+  if (strcmp(buff, "START") != 0) {
     std::cerr << "Expected START CONDITION" << std::endl;
     return 1;
   }
   std::cout << "Slave: Got start condition" << std::endl;
+  memset(buff, 0, BUFFER_SIZE);
+  strcpy(buff, "START");
   socket_write(buff, start_condition_len);
 
   //TODO: only for test
+  std::cout << "Slave: Start condition sent" << std::endl;
   while(1);
 
   char recv_buff[2];
@@ -229,7 +232,7 @@ int socket_read(char *buff, int byte_count) {
 #endif
 
   // TODO: only for tests
-  printf("Slave: Socket read: %s\n", buff);
+  std::cout << "Slave: Socket read: " << buff << std::endl; 
   return 0;
 }
 
@@ -241,6 +244,6 @@ int socket_write(char *buff, int byte_count) {
 #endif
 
   // TODO: only for tests
-  printf("Slave: Socket write: %s\n", buff);
+  std::cout << "Slave: Socket write: " << buff << std::endl; 
   return 0;
 }

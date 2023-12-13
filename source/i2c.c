@@ -6,8 +6,8 @@
  */
 
 #define IP "127.0.0.1"
-#define PORT 8082
-#define BUFFER_SIZE 1024
+#define PORT 8080
+#define BUFFER_SIZE 100
 
 static int sockfd = -1;
 static uint8_t i2c_slave_addr = 0x00;
@@ -46,10 +46,10 @@ int i2c_init(void) {
   servaddr.sin_addr.s_addr = inet_addr(IP);
   servaddr.sin_port = htons(PORT);
 
-  if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0) {
+  while (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0) {
     printf("Error connecting to server\n");
-    return -1;
   }
+  return 0;
 }
 
 bool i2c_start(void) {
@@ -204,32 +204,36 @@ bool i2c_read(uint8_t register_address, uint8_t *data, size_t size) {
 bool socket_start_condition() {
   /* simulating staring condition of I2C frame */
 
-  char buff[BUFFER_SIZE] = "START CONDITION";
+  char buff[BUFFER_SIZE] = "START";
   if (sockfd < 0) {
     printf("I2C was not initialized\n");
     return false;
   }
+  int ret_write = socket_write(buff, strlen(buff));
+  if (ret_write < 0) {
+    printf("Error writing to server\n");
+    return false;
+  }
 
-  socket_write(buff, strlen(buff));
-  socket_read(buff, strlen(buff));
+  int ret_read = socket_read(buff, strlen(buff));
+  if (ret_read < 0) {
+    printf("Error reading server\n");
+    return false;
+  }
 
-  // if ((ret_read < 0) || (ret_write < 0)) {
-  //   printf("Error writing or reading server\n");
-  //   return false;
-  // }
-
-  if (strcmp(buff, "START CONDITION") != 0) {
+  if (strcmp(buff, "START") != 0) {
     printf("Error sending START condition\n");
     return false;
   }
   // TODO: only for test
+  printf("Master: Start condition\n");
   while (1)
     ;
   return true;
 }
 
 bool socket_stop_condition() {
-  char *buff = "STOP CONDITION";
+  char *buff = "STOP";
   if (sockfd < 0) {
     printf("I2C was not initialized\n");
     return false;
@@ -264,7 +268,7 @@ bool socket_read(char *buff, size_t byte_count) {
 #endif
 
   if (ret < 0) {
-    printf("Error writing to server\n");
+    printf("Error reading from server\n");
     return false;
   }
 
@@ -280,6 +284,7 @@ bool socket_write(char *buff, size_t byte_count) {
     return false;
   }
 
+// TODO jdflasjfkl;asjklfjdas;lkfjklads;
 #ifdef _WIN32
   int ret = send(sockfd, buff, BUFFER_SIZE, 0);
 #else

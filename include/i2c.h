@@ -23,7 +23,6 @@
 #include <strings.h> // bzero()
 
 
-
 // TODO: change return types and handle errors, get rid of bool?
 // I2C interface
 int i2c_init(void);
