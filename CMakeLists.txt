@@ -28,6 +28,12 @@ add_executable(SensorSimulator
     source/sensor_simulator.cpp
 )
 
+# link ws2_32 library for windows
+if (WIN32)
+    target_link_libraries(MainApp PRIVATE ws2_32)
+    target_link_libraries(SensorSimulator PRIVATE ws2_32)
+endif()
+
 # Set include directories for the executables
 target_include_directories(SensorSimulator PUBLIC include)
 target_include_directories(MainApp PUBLIC include)

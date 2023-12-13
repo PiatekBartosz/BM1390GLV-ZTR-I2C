@@ -5,6 +5,10 @@
  * be done on registers.
  */
 
+#define IP "127.0.0.1"
+#define PORT 8080
+#define BUFFER_SIZE 1024
+
 static int sockfd = -1;
 static uint8_t i2c_slave_addr = 0x00;
 
@@ -59,9 +63,7 @@ bool i2c_start(void) {
   }
 
   /* Simulate starting condition */
-  char buff[BUFFER_SIZE] = "START CONDITION";
-  bool ret = socket_start_condition(buff);
-  return ret;
+  return socket_start_condition();
 }
 
 bool i2c_stop(void) {
@@ -69,14 +71,8 @@ bool i2c_stop(void) {
    * 1. Stop I2C
    */
 
-#ifdef _WIN32
-  closesocket(sockfd);
-  WSACleanup();
-#else
-  close(sockfd);
-#endif
-
-  return true;
+  /* Simulate stop condition */
+  return socket_stop_condition();
 }
 
 bool i2c_address(uint8_t addr) {
@@ -113,13 +109,13 @@ bool i2c_write(uint8_t register_address, uint8_t *data) {
   char buff[BUFFER_SIZE];
   int n;
 
-  strcpy(buff, "Hello from client");
-  int ret = write(sockfd, buff, sizeof(buff));
+  // strcpy(buff, "Hello from client");
+  // int ret = sockbuff, sizeof(buff));
 
-  if (ret < 0) {
-    printf("Error writing to server\n");
-    return false;
-  }
+  // if (ret < 0) {
+  //   printf("Error writing to server\n");
+  //   return false;
+  // }
 
   return true;
 }
@@ -141,56 +137,153 @@ bool i2c_read(uint8_t register_address, uint8_t *data, size_t size) {
     printf("I2C address not changed\n");
     return false;
   }
+
+  /* I2C frame simulation: */
+
+  /* Send slave address with and expect aknowledge*/ 
+  uint8_t slave_adr_with_read_bit = i2c_slave_addr | 0x01;
+  uint8_t aknowledge_bit = 0xFF; // have to simulate aknowledge bit with a byte
+  uint8_t buff[2] = {slave_adr_with_read_bit, aknowledge_bit};
+  bool ret = socket_write(buff, 2);
+  if (!ret) {
+    printf("Error writing to server\n");
+    return false;
+  }
+  ret = socket_read(buff, 2);
+  if (!ret) {
+    printf("Error reading from server\n");
+    return false;
+  }
+  if (buff[1] != 0x00) {
+    printf("Error with aknowledge I2C slave address\n");
+    return false;
+  }
+
+  /* Send register address and expect aknowledge*/
+  buff[0] = register_address;
+  buff[1] = 0xFF;
+  ret = socket_write(buff, 2);
+  if (!ret) {
+    printf("Error writing to server\n");
+    return false;
+  }
+  ret = socket_read(buff, 2);
+  if (!ret) {
+    printf("Error reading from server\n");
+    return false;
+  }
+  if (buff[1] != 0x00) {
+    printf("Error with aknowledge I2C register address\n");
+    return false;
+  }
+
+  /* Read register data */
+  for (size_t i = 0; i < size; ++i) {
+    buff[0] = 0x00;  
+    buff[1] = 0xFF;
+    ret = socket_write(buff, 2);
+    if (!ret) {
+      printf("Error writing to server\n");
+      return false;
+    }
+    ret = socket_read(buff, 2);
+    if (!ret) {
+      printf("Error reading from server\n");
+      return false;
+    }
+    if (buff[1] != 0x00) {
+      printf("Error with aknowledge I2C register address\n");
+      return false;
+    }
+    data[i] = buff[0];
+  }
+  return true;
 }
 
-bool socket_start_condition(char *buff) {
+bool socket_start_condition() {
   /* simulating staring of I2C frame */
 
+  char *buff = "START CONDITION";
   if (sockfd < 0) {
     printf("I2C was not initialized\n");
     return false;
   }
 
-  int ret_write = write(sockfd, buff, sizeof(buff));
+  socket_write(buff, strlen(buff));
+  socket_read(buff, strlen(buff));
 
-  int ret_read = read(sockfd, buff, sizeof(buff));
-
-  if ((ret_read < 0) || (ret_write < 0)) {
-    printf("Error writing or reading server\n");
-    return false;
-  }
+  // if ((ret_read < 0) || (ret_write < 0)) {
+  //   printf("Error writing or reading server\n");
+  //   return false;
+  // }
 
   if (strcmp(buff, "START CONDITION") != 0) {
     printf("Error sending START condition\n");
     return false;
   }
+  printf("Master: START CONDITION accepted\n");
   return true;
 }
 
-bool socket_write(uint8_t register_address, char *buff) {
+bool socket_stop_condition()
+{
+  char *buff = "STOP CONDITION";
   if (sockfd < 0) {
     printf("I2C was not initialized\n");
     return false;
   }
 
-  int ret = read(sockfd, buff, sizeof(buff));
+  socket_write(buff, strlen(buff));
+  socket_read(buff, strlen(buff));
 
-  if (ret < 0) {
-    printf("Error writing to server\n");
+  // if ((ret_read < 0) || (ret_write < 0)) {
+  //   printf("Error writing or reading server\n");
+  //   return false;
+  // }
+
+  if (strcmp(buff, "STOP CONDITION") != 0) {
+    printf("Error sending STOP condition\n");
     return false;
   }
-
-  return true;
+  return true; 
 }
 
-bool socket_read(uint8_t register_address, char *buf, size_t size) {
+bool socket_read(char *buff, size_t byte_count) {
   if (sockfd < 0) {
     printf("I2C was not initialized\n");
     return false;
   }
 
-  
+#ifdef _WIN32
+  recv(sockfd, buff, byte_count, 0);
+#else
+  read(sockfd, buff, byte_count);
+#endif
 
+  // if (ret < 0) {
+  //   printf("Error writing to server\n");
+  //   return false;
+  // }
+
+  return true;
+}
+
+bool socket_write(char *buff, size_t byte_count) {
+  if (sockfd < 0) {
+    printf("I2C was not initialized\n");
+    return false;
+  }
+
+#ifdef _WIN32
+  send(sockfd, buff, byte_count, 0);
+#else
+  write(sockfd, buff, byte_count);
+#endif
+
+  // if (ret < 0) {
+  //   printf("Error writing to server\n");
+  //   return false;
+  // }
 
   return true;
 }

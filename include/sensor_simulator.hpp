@@ -9,7 +9,7 @@
 // for Windows
 #ifdef _WIN32
 #include <winsock2.h>
-#include <ws2tcpip.h>
+// #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 // for Linux
 #else
@@ -25,9 +25,6 @@
 #include <string.h>
 #include <strings.h> // bzero()
 
-#define PORT 8080
-#define BUFFER_SIZE 1024
-
 #define MANUFACTURER_ID_ADDR 0x0F
 #define PART_ID_ADDR 0x10
 #define POWER_DOWN_ADDR 0x12
@@ -41,9 +38,6 @@
 #define PRESSURE_OUT_XL_ADDR 0x1C
 #define TEMPERATURE_OUT_HIGH_ADDR 0x1D
 #define TEMPERATURE_OUT_LOW_ADDR 0x1E
-
-#define MANUFACTURER_ID 0xE0;
-#define PART_ID 0x34;
 
 typedef uint8_t RegisterAddress;
 

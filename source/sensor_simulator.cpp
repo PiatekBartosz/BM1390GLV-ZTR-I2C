@@ -1,45 +1,60 @@
 #include "sensor_simulator.hpp"
 
+#define MANUFACTURER_ID 0xE0;
+#define PART_ID 0x34;
 #define COUNTS_PER_HPASCAL 2048 // TODO: check if correct
 #define COUNTS_PER_CELSIUS 32
+
+#define IP "127.0.0.1"
+#define PORT 8080
+#define BUFFER_SIZE 1024
 
 static int sockfd, connfd;
 
 int main(void) {
 
-#ifdef _WIN32
+  #ifdef _WIN32
   WSADATA wsaData;
-  if (WSAStartup(MAKEWORD(1, 1), &wsaData) != 0) {
+  if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
     std::cerr << "WSAStartup failed." << std::endl;
     return -1;
   }
-#endif
+  #endif
 
   // socket programming
   int len;
-  struct sockaddr_in servaddr, cli;
+  struct sockaddr_in serv_addr, client_addr;
+  int client_addr_len = sizeof(client_addr);
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd == -1) {
     std::cout << "Socket creation failed..." << std::endl;
   }
 
-  servaddr.sin_family = AF_INET;
-  servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  servaddr.sin_port = htons(PORT);
+  memset(&serv_addr, 0, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_addr.s_addr = inet_addr(IP);
+  serv_addr.sin_port = htons(PORT);
 
-  if ((bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr))) != 0) {
+  if ((bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) != 0) {
     std::cout << "Socket bind failed..." << std::endl;
+    closesocket(sockfd);
+    #ifdef _WIN32
+    WSACleanup();
+    #endif
     return -1;
   }
 
   if ((listen(sockfd, 5)) != 0) {
     std::cout << "Listen failed..." << std::endl;
+    closesocket(sockfd);
+    #ifdef _WIN32
+    WSACleanup();
+    #endif
     return -1;
   }
 
   std::cout << "Socket successfully binded..." << std::endl;
-  len = sizeof(cli);
 
   // file reading
   const char *relativeDataPath = "../data/222.txt";
@@ -54,6 +69,20 @@ int main(void) {
     return -1;
   }
 
+  // TODO check if it needs to be in while loop
+  connfd = accept(sockfd, (struct sockaddr *)&client_addr, &client_addr_len);
+
+  if (connfd < 0) {
+    std::cout << "Server acccept failed..." << std::endl;
+    #ifdef _WIN32
+    closesocket(sockfd);
+    WSACleanup();
+    #else
+    close(serverSocket);
+    #endif
+    return 1;
+  }
+
   while (1) {
 
     if (std::getline(iFile, line)) {
@@ -64,8 +93,6 @@ int main(void) {
 
       // refill registers with current data
       putPressTempDataRegisters(&sensorRegisters, pressure, temperature);
-
-      connfd = accept(sockfd, (struct sockaddr *)&cli, (socklen_t *)&len);
 
       if (connfd < 0) {
         std::cout << "Server acccept failed..." << std::endl;
@@ -87,14 +114,14 @@ int main(void) {
 
   iFile.close();
 
-#ifdef _WIN32
+  #ifdef _WIN32
   closesocket(sockfd);
   closesocket(connfd);
   WSACleanup();
-#else
+  #else
   close(connfd);
   close(sockfd);
-#endif
+  #endif
 
   return 0;
 }
@@ -159,37 +186,44 @@ int handleClient(int connfd, volatile SensorRegisters *sensorRegisters) {
   char buff[BUFFER_SIZE];
   int n;
 
-  // Expect START CONDITION
-  socket_read(buff, sizeof(buff));
-  if (strcmp(buff, "START") != 0) {
+  // Expect I2C START CONDITION
+  int start_condition_len = strlen("START CONDITION");
+  socket_read(buff, start_condition_len);
+  if (strcmp(buff, "START CONDITION") != 0) {
     std::cerr << "Expected START CONDITION" << std::endl;
     return 1;
   }
-  printf("Received data from client: %s \n", buff);
+  std::cout << "Slave: Got start condition" << std::endl;
+  socket_write(buff, start_condition_len);
 
-  
-  socket_write(buff, sizeof(buff));
+  char recv_buff[2];
+  // Expect I2C SLAVE ADDRESS & ACK
+  socket_read(recv_buff, 2);
+  uint8_t slave_address = (uint8_t) recv_buff[0];
+  uint8_t ack = (uint8_t) recv_buff[1];
 
-  // read(connfd, buff, sizeof(buff));
+  // Expect I2C REGISTER ADDRESS & ACK
 
-  // TODO later, for now send echo
+  // Send I2C REGISTER DATA & ACK
+
+
   return 0;
 }
 
-int socket_read(char *buff, int buff_size) {
+int socket_read(char *buff, int byte_count) {
 #ifdef _WIN32
-  recv(connfd, buff, sizeof(buff), 0);
+  recv(connfd, buff, byte_count, 0);
 #else
-  read(connfd, buff, sizeof(buff));
+  read(connfd, buff, byte_count);
 #endif
   return 0;
 }
 
-int socket_write(char *buff, int buff_size) {
+int socket_write(char *buff, int byte_count) {
 #ifdef _WIN32
-  send(connfd, buff, sizeof(buff), 0);
+  send(connfd, buff, byte_count, 0);
 #else
-  write(connfd, buff, sizeof(buff);
+  write(connfd, buff, byte_count);
 #endif
   return 0;
 }

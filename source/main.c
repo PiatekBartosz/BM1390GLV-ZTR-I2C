@@ -10,7 +10,7 @@ int main(void) {
   while (1) {
     float pressure, temperature;
 
-    BM1390GLV_ZTR_cfg();
+    // BM1390GLV_ZTR_cfg();
     BM1390GLV_ZTR_read(&pressure, &temperature);
 
     printf("Pressure: %f\n", pressure);
