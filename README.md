@@ -18,7 +18,7 @@ In another terminal:
 ./MainApp
 ```
 
-# Ideas for future imporovement
+# Ideas for future improvement
  1. Change driver to an interface
  2. Architecure - try to seperate logic and drivers
  3. Add inline functions for optimization
