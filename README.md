@@ -1,9 +1,9 @@
 # Build
-Builded using cmake extension
-It will only build  on Linux as it 
+Builded using VS Code cmake extension
+
 
 # Run 
-Make sure you are in build folder:
+Make sure you are in build folder (the 222.txx data file is accessed using relative path):
 ```
 cd build
 ```
