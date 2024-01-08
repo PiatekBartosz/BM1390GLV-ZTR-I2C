@@ -101,27 +101,6 @@ bool i2c_write(uint8_t register_address, uint8_t *data) {
     This function is not used in this projects, as we are only reading data from I2C device 
   */
 
-  // if (sockfd < 0) {
-  //   // printf("I2C was not initialized\n");
-  //   return false;
-  // }
-
-  // if (i2c_slave_addr == 0x00) {
-  //   // printf("I2C address not changed\n");
-  //   return false;
-  // }
-
-  // char buff[BUFFER_SIZE];
-  // int n;
-
-  // strcpy(buff, "Hello from client");
-  // int ret = sockbuff, sizeof(buff));
-
-  // if (ret < 0) {
-  //   printf("Error writing to server\n");
-  //   return false;
-  // }
-
   return true;
 }
 
