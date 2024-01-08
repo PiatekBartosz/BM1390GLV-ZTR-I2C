@@ -1,4 +1,5 @@
 #include "sensor_simulator.hpp"
+#include <cstring>
 
 #define MANUFACTURER_ID 0xE0;
 #define PART_ID 0x34;
@@ -120,13 +121,13 @@ int main(void) {
     else {
       char buff[24] = {0};
       socket_read(buff, 5);
-      char *end = "END";
-      socket_write(end, 3);
-      while (1);
+      strcpy(buff, "END");
+      socket_write(buff, 3);
+      while (1)
+        ;
       break;
     }
   }
-
 
   iFile.close();
 
@@ -187,7 +188,7 @@ int putPressTempDataRegisters(volatile SensorRegisters *sensorRegisters,
 
   // do not account for COUNTS_PER_HPASCAL to avoid loss of precision
   // uint32_t raw_pressure = pressure * COUNTS_PER_HPASCAL;
-  sensorRegisters->pressureOutHigh.data =  (pressure >> 16) & 0xFF;
+  sensorRegisters->pressureOutHigh.data = (pressure >> 16) & 0xFF;
   sensorRegisters->pressureOutLow.data = (pressure >> 8) & 0xFF;
   sensorRegisters->pressureOutXl.data = pressure & 0xFF;
 
@@ -195,8 +196,9 @@ int putPressTempDataRegisters(volatile SensorRegisters *sensorRegisters,
   // TODO: change serialization
   uint32_t raw_temperature;
   memcpy(&raw_temperature, &temperature, sizeof(raw_temperature));
-  sensorRegisters->temperatureOutHigh.data = (char) (raw_temperature >> 8) & 0xFF;
-  sensorRegisters->temperatureOutLow.data = (char) (raw_temperature) & 0xFF;
+  sensorRegisters->temperatureOutHigh.data =
+      (char)(raw_temperature >> 8) & 0xFF;
+  sensorRegisters->temperatureOutLow.data = (char)(raw_temperature)&0xFF;
   return 0;
 }
 
@@ -217,11 +219,10 @@ int handleClient(volatile SensorRegisters *sensorRegisters) {
   socket_write(buff, start_condition_len);
   std::cout << "Slave: Start condition sent" << std::endl;
 
-  char recv_buff[4];
   // Expect I2C SLAVE ADDRESS & ACK
-  socket_read(recv_buff, 2);
-  uint8_t slave_address = (uint8_t)recv_buff[0];
-  uint8_t ack = (uint8_t)recv_buff[1];
+  socket_read(buff, 2);
+  uint8_t slave_address = (uint8_t)buff[0];
+  uint8_t ack = (uint8_t)buff[1];
   if (slave_address >> 1 != I2C_SLAVE_ADDRESS) {
     std::cerr << "Expected I2C SLAVE ADDRESS" << std::endl;
     return 1;
@@ -231,11 +232,11 @@ int handleClient(volatile SensorRegisters *sensorRegisters) {
   socket_write(buff, 2);
 
   // Check if write mode
-  if ( (slave_address & 0x01) == 0x00) {
+  if ((slave_address & 0x01) == 0x00) {
     // Expect I2C REGISTER ADDRESS & ACK
-    socket_read(recv_buff, 2);
-    uint8_t register_address = (uint8_t)recv_buff[0];
-    uint8_t ack = (uint8_t)recv_buff[1];
+    socket_read(buff, 2);
+    uint8_t register_address = (uint8_t)buff[0];
+    uint8_t ack = (uint8_t)buff[1];
     buff[0] = register_address;
     buff[1] = 0x00;
     socket_write(buff, 2);
@@ -251,10 +252,10 @@ int handleClient(volatile SensorRegisters *sensorRegisters) {
     strcpy(buff, "START");
     socket_write(buff, start_condition_len);
 
-    //Expect slave addres 2nd time and ACK
-    socket_read(recv_buff, 2);
-    slave_address = (uint8_t)recv_buff[0];
-    ack = (uint8_t)recv_buff[1];
+    // Expect slave addres 2nd time and ACK
+    socket_read(buff, 2);
+    slave_address = (uint8_t)buff[0];
+    ack = (uint8_t)buff[1];
     if (slave_address >> 1 != I2C_SLAVE_ADDRESS) {
       std::cerr << "Expected I2C SLAVE ADDRESS" << std::endl;
       return 1;
@@ -267,55 +268,57 @@ int handleClient(volatile SensorRegisters *sensorRegisters) {
     socket_read(buff, 2);
 
     // Send data to master until NACK
-    for(int i = 0; i < 5; ++i) {
-      switch(i) {
-        case 0:
-          buff[0] = sensorRegisters->pressureOutHigh.data;
-          buff[1] = 0xFF;
-          break;
+    for (int i = 0; i < 5; ++i) {
+      switch (i) {
+      case 0:
+        buff[0] = sensorRegisters->pressureOutHigh.data;
+        buff[1] = 0xFF;
+        break;
 
-        case 1:
-          buff[0] = sensorRegisters->pressureOutLow.data;
-          buff[1] = 0xFF;
-          break;
+      case 1:
+        buff[0] = sensorRegisters->pressureOutLow.data;
+        buff[1] = 0xFF;
+        break;
 
-        case 2:
-          buff[0] = sensorRegisters->pressureOutXl.data;
-          buff[1] = 0xFF;
-          break;
+      case 2:
+        buff[0] = sensorRegisters->pressureOutXl.data;
+        buff[1] = 0xFF;
+        break;
 
-        case 3:
-          buff[0] = sensorRegisters->temperatureOutHigh.data;
-          buff[1] = 0xFF;
-          break;
+      case 3:
+        buff[0] = sensorRegisters->temperatureOutHigh.data;
+        buff[1] = 0xFF;
+        break;
 
-        case 4:
-          buff[0] = sensorRegisters->temperatureOutLow.data;
-          buff[1] = 0xFF;
-          break;
+      case 4:
+        buff[0] = sensorRegisters->temperatureOutLow.data;
+        buff[1] = 0xFF;
+        break;
       }
 
       socket_write(buff, 2);
-      socket_read(recv_buff, 2);
+      socket_read(buff, 2);
 
-      ack = (uint8_t)recv_buff[1];
+      ack = (uint8_t)buff[1];
       if (ack != 0x00) {
         std::cout << "Slave: No ACK received" << std::endl;
       }
-
     }
     socket_write(buff, 2);
 
     // Expect STOP CONDITION
-    socket_read(recv_buff, 4);
-    if (strcmp(recv_buff, "STOP") == 0) {
+    socket_read(buff, 4);
+    if (std::strcmp(buff, "STOP") == 0) {
       std::cout << "Slave: Got STOP condition" << std::endl;
+      strcpy(buff, "STOP");
+      socket_write(buff, 4);
     }
   }
   return 0;
 }
 
 int socket_read(char *buff, int byte_count) {
+  memset(buff, '\0', BUFFER_SIZE);
 #ifdef _WIN32
   recv(connfd, buff, byte_count, 0);
 #else
@@ -323,7 +326,7 @@ int socket_read(char *buff, int byte_count) {
 #endif
 
   // TODO: only for tests
-  // std::cout << "Slave: Socket read: " << buff << std::endl; 
+  // std::cout << "Slave: Socket read: " << buff << std::endl;
   return 0;
 }
 
@@ -335,6 +338,6 @@ int socket_write(char *buff, int byte_count) {
 #endif
 
   // TODO: only for tests
-  // std::cout << "Slave: Socket write: " << buff << std::endl; 
+  // std::cout << "Slave: Socket write: " << buff << std::endl;
   return 0;
 }

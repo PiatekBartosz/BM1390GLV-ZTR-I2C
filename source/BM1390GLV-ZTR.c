@@ -34,7 +34,7 @@ void BM1390GLV_ZTR_cfg(void) {
 }
 
 void BM1390GLV_ZTR_read(uint32_t *pressure, float *temperature) {
-  int8_t raw_data[PRESSURE_AND_TEMPERATURE_DATA_LEN];
+  uint8_t raw_data[PRESSURE_AND_TEMPERATURE_DATA_LEN];
 
   i2c_start();
   i2c_address(BM1390GLV_ZTR_I2C_SLAVE_ADDR);
@@ -45,12 +45,13 @@ void BM1390GLV_ZTR_read(uint32_t *pressure, float *temperature) {
   *pressure = calculate_hpascal(raw_data);
   // *temperature = calculate_celsius(raw_data);
 }
-uint32_t calculate_hpascal(char *raw_data){
+
+uint32_t calculate_hpascal(char *raw_data) {
 
   uint32_t pressure = 0;
-  pressure |= (uint32_t) ((uint8_t) raw_data[0] << 16);
-  pressure |= (uint32_t) ((uint8_t) raw_data[1] << 8);
-  pressure |= (uint32_t) ((uint8_t) raw_data[2]);
+  pressure |= (uint32_t)((uint8_t)raw_data[0] << 16);
+  pressure |= (uint32_t)((uint8_t)raw_data[1] << 8);
+  pressure |= (uint32_t)((uint8_t)raw_data[2]);
 
   return pressure;
 }
@@ -58,7 +59,7 @@ uint32_t calculate_hpascal(char *raw_data){
 // float calculate_celsius(char *raw_data){
 
 //   uint32_t temperature_raw = 0;
-//   temperature_raw |= (uint32_t) ((uint8_t) raw_data[3] << 8); 
+//   temperature_raw |= (uint32_t) ((uint8_t) raw_data[3] << 8);
 //   temperature_raw |= (uint32_t) ((uint8_t) raw_data[4]);
 //   float temperature;
 //   memcpy(&temperature, &temperature_raw, sizeof(temperature_raw));
