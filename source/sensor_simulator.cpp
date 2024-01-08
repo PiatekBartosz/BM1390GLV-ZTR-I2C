@@ -7,7 +7,7 @@
 #define COUNTS_PER_CELSIUS 32
 
 #define IP "127.0.0.1"
-#define PORT 8080
+#define PORT 8081
 #define BUFFER_SIZE 100
 #define I2C_SLAVE_ADDRESS 0x5D
 
@@ -77,6 +77,7 @@ int main(void) {
 
   if (!iFile.is_open()) {
     std::cerr << "Unable to open data/222.txt file" << std::endl;
+    std::cerr << "Make sure you are in the build directory: ./SensorSimulator" << std::endl;
     return -1;
   }
 
@@ -123,8 +124,6 @@ int main(void) {
       socket_read(buff, 5);
       strcpy(buff, "END");
       socket_write(buff, 3);
-      while (1)
-        ;
       break;
     }
   }
@@ -139,6 +138,8 @@ int main(void) {
   close(connfd);
   close(sockfd);
 #endif
+  
+  std::cout << "End of data" << std::endl;
 
   return 0;
 }

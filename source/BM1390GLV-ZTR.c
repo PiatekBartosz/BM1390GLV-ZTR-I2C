@@ -33,10 +33,13 @@ void BM1390GLV_ZTR_cfg(void) {
   i2c_stop();
 }
 
-void BM1390GLV_ZTR_read(uint32_t *pressure, float *temperature) {
+int BM1390GLV_ZTR_read(uint32_t *pressure, float *temperature) {
   uint8_t raw_data[PRESSURE_AND_TEMPERATURE_DATA_LEN];
 
-  i2c_start();
+  int ret = i2c_start();
+  if (ret != 0) {
+    return ret;
+  }
   i2c_address(BM1390GLV_ZTR_I2C_SLAVE_ADDR);
   i2c_read(TEMPERATURE_OUT_HIGH_ADDR, raw_data,
            PRESSURE_AND_TEMPERATURE_DATA_LEN);
@@ -44,6 +47,7 @@ void BM1390GLV_ZTR_read(uint32_t *pressure, float *temperature) {
 
   *pressure = calculate_hpascal(raw_data);
   // *temperature = calculate_celsius(raw_data);
+  return 0;
 }
 
 uint32_t calculate_hpascal(char *raw_data) {

@@ -6,11 +6,17 @@ int main(void) {
   uint32_t sensitivity;
 
   double raw_a, raw_b;
+
   printf("Enter sensitivity: [Pa], for example 10\n");
-  scanf("%lf", &raw_a);
+  if (scanf("%lf", &raw_a) != 1 || raw_a < 0) {
+    printf("Invalid input sensivity\n");
+    return 1;
+  }
 
   printf("Enter time constant: [s], for example 1s: 1\n");
-  scanf("%lf", &raw_b);
+  if (scanf("%lf", &raw_b) != 1 || raw_b <= 0.0) {
+    printf("Invalid input time constant\n");
+  }
 
   sensitivity = (uint32_t)raw_a;
   timeConstant = raw_b;
@@ -19,20 +25,23 @@ int main(void) {
   uint32_t threshold = (uint32_t)(timeConstant * 60);
 
   BM1390GLV_ZTR_init();
+
   uint32_t pressure;
   float temperature;
-
   BM1390GLV_ZTR_read(&pressure, &temperature);
   printf("Pressure: %d\n", pressure);
 
-  uint32_t intial_pressure;
-  intial_pressure = pressure;
+  uint32_t intial_pressure = pressure;
 
   size_t higher_count = 0;
   size_t lower_count = 0;
 
   while (1) {
-    BM1390GLV_ZTR_read(&pressure, &temperature);
+    int ret = BM1390GLV_ZTR_read(&pressure, &temperature);
+    // END Program
+    if (ret != 0) {
+      return 0;
+    }
     // printf("Pressure: %d\n", pressure);
 
     if (pressure > intial_pressure + sensitivity) {
