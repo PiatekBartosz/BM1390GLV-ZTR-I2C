@@ -3,7 +3,7 @@ Builded using VS Code cmake extension
 
 
 # Run 
-Make sure you are in build folder (the 222.txx data file is accessed using relative path):
+Make sure you are in build folder (the 222.txt data file is accessed using relative path) - the path must be data/222.txt from SensorSimulator path:
 ```
 cd build
 ```
