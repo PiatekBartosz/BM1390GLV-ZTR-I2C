@@ -1,9 +1,14 @@
+#ifndef SENSOR_SIMULATOR_HPP
+#define SENSOR_SIMULATOR_HPP
+
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <unordered_map>
+#include <cstring>
 
 // cross-platform socket programming
 // for Windows
@@ -42,7 +47,7 @@
 typedef uint8_t RegisterAddress;
 
 typedef union {
-  // used to acces individual bits
+  // used to access individual bits
   struct {
     uint8_t bit0 : 1;
     uint8_t bit1 : 1;
@@ -58,56 +63,18 @@ typedef union {
 
 } Register;
 
-typedef struct {
-  RegisterAddress manufacturerIdAddr;
-  Register manufacturerId;
-
-  RegisterAddress partIdAddr;
-  Register partId;
-
-  RegisterAddress powerDownAddr;
-  Register powerDown;
-
-  RegisterAddress resetAddr;
-  Register reset;
-
-  RegisterAddress modeControlAddr;
-  Register modeControl;
-
-  RegisterAddress fifoControlAddr;
-  Register fifoControl;
-
-  RegisterAddress fifoDataAddr;
-  Register fifoData;
-
-  RegisterAddress statusAddr;
-  Register status;
-
-  RegisterAddress pressureOutHighAddr;
-  Register pressureOutHigh;
-
-  RegisterAddress pressureOutLowAddr;
-  Register pressureOutLow;
-
-  RegisterAddress pressureOutXlAddr;
-  Register pressureOutXl;
-
-  RegisterAddress temperatureOutHighAddr;
-  Register temperatureOutHigh;
-
-  RegisterAddress temperatureOutLowAddr;
-  Register temperatureOutLow;
-
-} SensorRegisters;
-
 int parseLine(std::string &line, uint32_t &pressure, float &temperature);
 
-int initSensorRegisters(volatile SensorRegisters *sensorRegisters);
+std::unordered_map<RegisterAddress, Register> initSensorRegisters();
 
-int putPressTempDataRegisters(volatile SensorRegisters *sensorRegisters,
-                              uint32_t pressure, float temperature);
+int putPressTempDataRegisters(
+    std::unordered_map<RegisterAddress, Register> &sensorRegistersMap,
+    uint32_t pressure, float temperature);
 
-int handleClient(volatile SensorRegisters *sensorRegisters);
+int handleClient(
+    std::unordered_map<RegisterAddress, Register> &sensorRegistersMap);
 
 int socket_read(char *buff, int buff_size);
 int socket_write(char *buff, int buff_size);
+
+#endif // SENSOR_SIMULATOR_HPP

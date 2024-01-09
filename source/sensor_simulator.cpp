@@ -1,8 +1,7 @@
 #include "sensor_simulator.hpp"
-#include <cstring>
 
-#define MANUFACTURER_ID 0xE0;
-#define PART_ID 0x34;
+#define MANUFACTURER_ID 0xE0
+#define PART_ID 0x34
 #define COUNTS_PER_HPASCAL 2048 // TODO: check if correct
 #define COUNTS_PER_CELSIUS 32
 
@@ -24,7 +23,10 @@ int main(void) {
   }
 #endif
 
-  // socket programming
+  /*
+    Socket creation
+  */
+
   int len;
   struct sockaddr_in serv_addr, client_addr;
 #ifdef _WIN32
@@ -67,22 +69,30 @@ int main(void) {
 
   std::cout << "Socket successfully binded..." << std::endl;
 
-  // file reading
+  /*
+    File reading
+  */
+
   const char *relativeDataPath = "../data/222.txt";
-  volatile SensorRegisters sensorRegisters;
-  initSensorRegisters(&sensorRegisters);
+
+  std::unordered_map<RegisterAddress, Register> sensorRegistersMap =
+      initSensorRegisters();
 
   std::ifstream iFile(relativeDataPath);
   std::string line;
 
   if (!iFile.is_open()) {
     std::cerr << "Unable to open data/222.txt file" << std::endl;
-    std::cerr << "Make sure you are in the build directory: ./SensorSimulator" << std::endl;
+    std::cerr << "Make sure you are in the build directory: ./SensorSimulator"
+              << std::endl;
     return -1;
   }
 
-  // TODO check if it needs to be in while loop
   connfd = accept(sockfd, (struct sockaddr *)&client_addr, &client_addr_len);
+
+  /*
+    Main app loop
+  */
 
   while (1) {
 
@@ -94,7 +104,7 @@ int main(void) {
 #else
       close(sockfd);
 #endif
-      return 1;
+      return -1;
     }
 
     if (std::getline(iFile, line)) {
@@ -104,7 +114,7 @@ int main(void) {
       parseLine(line, pressure, temperature);
 
       // refill registers with current data
-      putPressTempDataRegisters(&sensorRegisters, pressure, temperature);
+      putPressTempDataRegisters(sensorRegistersMap, pressure, temperature);
 
       if (connfd < 0) {
         std::cout << "Server acccept failed..." << std::endl;
@@ -112,7 +122,7 @@ int main(void) {
       }
 
       // handles client requests with I2C simulation
-      int ret = handleClient(&sensorRegisters);
+      int ret = handleClient(sensorRegistersMap);
       if (ret != 0) {
         std::cerr << "Error handling client" << std::endl;
         return -1;
@@ -120,7 +130,7 @@ int main(void) {
     }
 
     else {
-      char buff[24] = {0};
+      char buff[BUFFER_SIZE] = {0};
       socket_read(buff, 5);
       strcpy(buff, "END");
       socket_write(buff, 3);
@@ -138,7 +148,7 @@ int main(void) {
   close(connfd);
   close(sockfd);
 #endif
-  
+
   std::cout << "End of data" << std::endl;
 
   return 0;
@@ -177,33 +187,51 @@ int parseLine(std::string &line, uint32_t &pressure, float &temperature) {
   return 0;
 }
 
-int initSensorRegisters(volatile SensorRegisters *sensorRegisters) {
-  sensorRegisters->manufacturerId.data = MANUFACTURER_ID;
-  sensorRegisters->partId.data = PART_ID;
-  return 0;
+// Function to initialize the registers
+std::unordered_map<RegisterAddress, Register> initSensorRegisters() {
+
+  std::unordered_map<RegisterAddress, Register> sensorRegistersMap = {
+      {MANUFACTURER_ID_ADDR, {0}},    {PART_ID_ADDR, {0}},
+      {POWER_DOWN_ADDR, {0}},         {RESET_ADDR, {0}},
+      {MODE_CONTROL_ADDR, {0}},       {FIFO_CONTROL_ADDR, {0}},
+      {FIFO_DATA_ADDR, {0}},          {STATUS_ADDR, {0}},
+      {PRESSURE_OUT_HIGH_ADDR, {0}},  {PRESSURE_OUT_LOW_ADDR, {0}},
+      {PRESSURE_OUT_XL_ADDR, {0}},    {TEMPERATURE_OUT_HIGH_ADDR, {0}},
+      {TEMPERATURE_OUT_LOW_ADDR, {0}}};
+
+  sensorRegistersMap[MANUFACTURER_ID_ADDR].data = MANUFACTURER_ID;
+  sensorRegistersMap[PART_ID_ADDR].data = PART_ID;
+  return sensorRegistersMap;
 }
 
 // TODO: make test
-int putPressTempDataRegisters(volatile SensorRegisters *sensorRegisters,
-                              uint32_t pressure, float temperature) {
+int putPressTempDataRegisters(
+    std::unordered_map<RegisterAddress, Register> &sensorRegistersMap,
+    uint32_t pressure, float temperature) {
 
   // do not account for COUNTS_PER_HPASCAL to avoid loss of precision
   // uint32_t raw_pressure = pressure * COUNTS_PER_HPASCAL;
-  sensorRegisters->pressureOutHigh.data = (pressure >> 16) & 0xFF;
-  sensorRegisters->pressureOutLow.data = (pressure >> 8) & 0xFF;
-  sensorRegisters->pressureOutXl.data = pressure & 0xFF;
+  sensorRegistersMap[PRESSURE_OUT_HIGH_ADDR].data = (pressure >> 16) & 0xFF;
+  sensorRegistersMap[PRESSURE_OUT_LOW_ADDR].data = (pressure >> 8) & 0xFF;
+  sensorRegistersMap[PRESSURE_OUT_XL_ADDR].data = pressure & 0xFF;
 
   // There might be a loss in precision because of float preccision
   // TODO: change serialization
+  // we are not using temperature
   uint32_t raw_temperature;
-  memcpy(&raw_temperature, &temperature, sizeof(raw_temperature));
-  sensorRegisters->temperatureOutHigh.data =
-      (char)(raw_temperature >> 8) & 0xFF;
-  sensorRegisters->temperatureOutLow.data = (char)(raw_temperature)&0xFF;
+  static_assert(sizeof(float) == sizeof(uint32_t),
+                "Size mismatch between float and uint32_t");
+  std::memcpy(&raw_temperature, &temperature, sizeof(raw_temperature));
+  sensorRegistersMap[TEMPERATURE_OUT_HIGH_ADDR].data =
+      static_cast<char>((raw_temperature >> 8) & 0xFF);
+  sensorRegistersMap[TEMPERATURE_OUT_LOW_ADDR].data =
+      static_cast<char>(raw_temperature & 0xFF);
+
   return 0;
 }
 
-int handleClient(volatile SensorRegisters *sensorRegisters) {
+int handleClient(
+    std::unordered_map<RegisterAddress, Register> &sensorRegistersMap) {
   char buff[BUFFER_SIZE] = {0};
   int n;
 
@@ -272,27 +300,27 @@ int handleClient(volatile SensorRegisters *sensorRegisters) {
     for (int i = 0; i < 5; ++i) {
       switch (i) {
       case 0:
-        buff[0] = sensorRegisters->pressureOutHigh.data;
+        buff[0] = sensorRegistersMap[PRESSURE_OUT_HIGH_ADDR].data;
         buff[1] = 0xFF;
         break;
 
       case 1:
-        buff[0] = sensorRegisters->pressureOutLow.data;
+        buff[0] = sensorRegistersMap[PRESSURE_OUT_LOW_ADDR].data;
         buff[1] = 0xFF;
         break;
 
       case 2:
-        buff[0] = sensorRegisters->pressureOutXl.data;
+        buff[0] = sensorRegistersMap[PRESSURE_OUT_XL_ADDR].data;
         buff[1] = 0xFF;
         break;
 
       case 3:
-        buff[0] = sensorRegisters->temperatureOutHigh.data;
+        buff[0] = sensorRegistersMap[TEMPERATURE_OUT_HIGH_ADDR].data;
         buff[1] = 0xFF;
         break;
 
       case 4:
-        buff[0] = sensorRegisters->temperatureOutLow.data;
+        buff[0] = sensorRegistersMap[TEMPERATURE_OUT_LOW_ADDR].data;
         buff[1] = 0xFF;
         break;
       }
