@@ -217,7 +217,7 @@ int putPressTempDataRegisters(
 
   // There might be a loss in precision because of float preccision
   // TODO: change serialization
-  // we are not using temperature
+  // not used in the example
   uint32_t raw_temperature;
   static_assert(sizeof(float) == sizeof(uint32_t),
                 "Size mismatch between float and uint32_t");
@@ -353,9 +353,6 @@ int socket_read(char *buff, int byte_count) {
 #else
   read(connfd, buff, byte_count);
 #endif
-
-  // TODO: only for tests
-  // std::cout << "Slave: Socket read: " << buff << std::endl;
   return 0;
 }
 

@@ -42,8 +42,6 @@ int main(void) {
     if (ret != 0) {
       return 0;
     }
-    // printf("Pressure: %d\n", pressure);
-
     if (pressure > intial_pressure + sensitivity) {
       higher_count++;
       lower_count = 0;
